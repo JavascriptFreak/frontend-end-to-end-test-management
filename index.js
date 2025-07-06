@@ -1,43 +1,81 @@
 const { Builder, By, Key, until } = require('selenium-webdriver');
 require('chromedriver');
+const fetch = require('node-fetch');
 
 const config = {
-  baseUrl: 'https://demoqa.com/', // CHANGE this for any site
+  baseUrl: 'https://demoqa.com/',  // Change this per website
+  user: {
+    username: 'standard_user',
+    password: 'secret_sauce',
+  },
   searchKeyword: 'sample',
+  selectors: {
+    login: {
+      username: ['input[type="text"]', 'input[name*="user"]'],
+      password: ['input[type="password"]'],
+      loginBtn: ['button[type="submit"]', 'input[type="submit"]', 'button.login'],
+    },
+    searchInput: ['input[type="search"]', 'input[name*="search"]'],
+    categories: ['nav a', '.categories a', '.side_categories a'],
+    productCards: ['.product', '.product-card', '.inventory_item', '.product_pod'],
+    paginationNext: ['.pagination .next a', '.pager .next a', 'a[rel="next"]'],
+    productLinks: ['a[href*="product"]', '.inventory_item a', 'h3 a'],
+    addToCartBtn: ['button.add-to-cart', '.btn_primary', '.btn-add-to-cart'],
+    logout: ['a[href*="logout"]', 'button.logout', '#logout_sidebar_link'],
+  }
 };
 
 let driver;
 
-async function elementExists(selector, type = 'css') {
+async function elementExists(selector) {
   try {
-    await driver.findElement(type === 'css' ? By.css(selector) : By.xpath(selector));
+    await driver.findElement(By.css(selector));
     return true;
   } catch {
     return false;
   }
 }
 
+async function findFirstExistingSelector(selectors) {
+  for (const sel of selectors) {
+    if (await elementExists(sel)) {
+      return sel;
+    }
+  }
+  return null;
+}
+
+async function waitForElement(selector, timeout = 5000) {
+  try {
+    await driver.wait(until.elementLocated(By.css(selector)), timeout);
+    await driver.wait(until.elementIsVisible(driver.findElement(By.css(selector))), timeout);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function safeTest(testFunc, name) {
+  try {
+    await testFunc();
+  } catch (e) {
+    console.error(`❌ Error in ${name}:`, e.message);
+  }
+}
+
 async function testLogin() {
-  const selectors = {
-    username: 'input[type="text"], input[name*="user"]',
-    password: 'input[type="password"]',
-    loginBtn: 'button[type="submit"], input[type="submit"], button.login',
-  };
+  const usernameSelector = await findFirstExistingSelector(config.selectors.login.username);
+  const passwordSelector = await findFirstExistingSelector(config.selectors.login.password);
+  const loginBtnSelector = await findFirstExistingSelector(config.selectors.login.loginBtn);
 
-  const userExists = await elementExists(selectors.username);
-  const passExists = await elementExists(selectors.password);
-  const btnExists = await elementExists(selectors.loginBtn);
-
-  if (userExists && passExists && btnExists) {
-    console.log('🔐 Attempting Login...');
-    try {
-      await driver.findElement(By.css(selectors.username)).sendKeys('standard_user');
-      await driver.findElement(By.css(selectors.password)).sendKeys('secret_sauce');
-      await driver.findElement(By.css(selectors.loginBtn)).click();
+  if (usernameSelector && passwordSelector && loginBtnSelector) {
+    if (await waitForElement(usernameSelector) && await waitForElement(passwordSelector)) {
+      console.log('🔐 Attempting Login...');
+      await driver.findElement(By.css(usernameSelector)).sendKeys(config.user.username);
+      await driver.findElement(By.css(passwordSelector)).sendKeys(config.user.password);
+      await driver.findElement(By.css(loginBtnSelector)).click();
       await driver.sleep(1000);
       console.log('✅ Login attempted');
-    } catch (e) {
-      console.warn('⚠️ Login attempt failed:', e.message);
     }
   } else {
     console.log('ℹ️ Login not available');
@@ -57,52 +95,55 @@ async function testHomeHeader() {
 }
 
 async function testCategoryNavigation() {
-  const selector = 'nav a, .categories a, .side_categories a';
-  try {
-    const links = await driver.findElements(By.css(selector));
+  const categorySelector = await findFirstExistingSelector(config.selectors.categories);
+  if (categorySelector) {
+    const links = await driver.findElements(By.css(categorySelector));
     if (links.length > 0) {
-      console.log(`📂 Categories found: ${links.length}`);
       const href = await links[0].getAttribute('href');
-      await driver.get(href);
-      console.log(`✅ Navigated to category: ${href}`);
-    } else {
-      console.log('ℹ️ No categories found');
+      if (href) {
+        await driver.get(href);
+        console.log(`✅ Navigated to category: ${href}`);
+        await driver.sleep(1000);
+        return;
+      }
     }
-  } catch {
-    console.log('ℹ️ No categories available');
   }
+  console.log('ℹ️ No categories found');
 }
 
 async function testSearchFunctionality() {
-  const searchSelector = 'input[type="search"], input[name*="search"]';
-  if (await elementExists(searchSelector)) {
-    console.log('🔍 Performing search...');
-    const input = await driver.findElement(By.css(searchSelector));
-    await input.sendKeys(config.searchKeyword, Key.RETURN);
-    await driver.sleep(2000);
-    console.log('✅ Search performed');
+  const searchSelector = await findFirstExistingSelector(config.selectors.searchInput);
+  if (searchSelector) {
+    if (await waitForElement(searchSelector)) {
+      console.log('🔍 Performing search...');
+      const input = await driver.findElement(By.css(searchSelector));
+      await input.clear();
+      await input.sendKeys(config.searchKeyword, Key.RETURN);
+      await driver.sleep(2000);
+      console.log('✅ Search performed');
+    }
   } else {
     console.log('ℹ️ Search not available');
   }
 }
 
 async function testProductCardPresence() {
-  const productSelector = '.product, .product-card, .inventory_item, .product_pod';
-  try {
+  const productSelector = await findFirstExistingSelector(config.selectors.productCards);
+  if (productSelector) {
     const cards = await driver.findElements(By.css(productSelector));
     if (cards.length > 0) {
       console.log(`🛍️ Found ${cards.length} product cards`);
     } else {
       console.log('ℹ️ No product cards found');
     }
-  } catch {
+  } else {
     console.log('ℹ️ Product cards not available');
   }
 }
 
 async function testPagination() {
-  const nextSelector = '.pagination .next a, .pager .next a, a[rel="next"]';
-  if (await elementExists(nextSelector)) {
+  const nextSelector = await findFirstExistingSelector(config.selectors.paginationNext);
+  if (nextSelector) {
     console.log('➡️ Pagination detected, clicking next...');
     const next = await driver.findElement(By.css(nextSelector));
     await next.click();
@@ -114,24 +155,25 @@ async function testPagination() {
 }
 
 async function testFirstProductDetail() {
-  const productLinkSelector = 'a[href*="product"], .inventory_item a, h3 a';
-  try {
+  const productLinkSelector = await findFirstExistingSelector(config.selectors.productLinks);
+  if (productLinkSelector) {
     const links = await driver.findElements(By.css(productLinkSelector));
     if (links.length > 0) {
       const href = await links[0].getAttribute('href');
-      await driver.get(href);
-      console.log(`🔎 Opened product detail page: ${href}`);
-    } else {
-      console.log('ℹ️ No product links found');
+      if (href) {
+        await driver.get(href);
+        console.log(`🔎 Opened product detail page: ${href}`);
+        await driver.sleep(1000);
+        return;
+      }
     }
-  } catch {
-    console.log('ℹ️ Product detail not available');
   }
+  console.log('ℹ️ Product detail not available');
 }
 
 async function testAddToCart() {
-  const addBtnSelector = 'button.add-to-cart, .btn_primary, .btn-add-to-cart';
-  if (await elementExists(addBtnSelector)) {
+  const addBtnSelector = await findFirstExistingSelector(config.selectors.addToCartBtn);
+  if (addBtnSelector) {
     const btn = await driver.findElement(By.css(addBtnSelector));
     await btn.click();
     console.log('🛒 Add to cart clicked');
@@ -160,10 +202,11 @@ async function testButtonVisibility() {
 }
 
 async function testLogout() {
-  const logoutSelector = 'a[href*="logout"], button.logout, #logout_sidebar_link';
-  if (await elementExists(logoutSelector)) {
+  const logoutSelector = await findFirstExistingSelector(config.selectors.logout);
+  if (logoutSelector) {
     await driver.findElement(By.css(logoutSelector)).click();
     console.log('👋 Logged out');
+    await driver.sleep(1000);
   } else {
     console.log('ℹ️ Logout not available');
   }
@@ -176,16 +219,14 @@ async function testBrokenLinks() {
     try {
       const href = await a.getAttribute('href');
       if (href && href.startsWith('http')) {
-        await driver.get(href);
-        const bodyText = await driver.findElement(By.tagName('body')).getText();
-        if (bodyText.includes('404') || bodyText.includes('Not Found')) {
-          console.warn(`❌ Broken link: ${href}`);
+        const response = await fetch(href, { method: 'HEAD' });
+        if (!response.ok) {
+          console.warn(`❌ Broken link: ${href} (status: ${response.status})`);
         } else {
           console.log(`✅ Link OK: ${href}`);
         }
-        await driver.navigate().back();
       }
-    } catch (e) {
+    } catch {
       console.warn(`⚠️ Link check failed`);
     }
   }
@@ -197,18 +238,18 @@ async function runAllTests() {
   try {
     await driver.get(config.baseUrl);
 
-    await testLogin();
-    await testHomeHeader();
-    await testCategoryNavigation();
-    await testSearchFunctionality();
-    await testProductCardPresence();
-    await testPagination();
-    await testFirstProductDetail();
-    await testAddToCart();
-    await testResponsiveUI();
-    await testButtonVisibility();
-    await testLogout();
-    await testBrokenLinks();
+    await safeTest(testLogin, 'Login Test');
+    await safeTest(testHomeHeader, 'Home Header Test');
+    await safeTest(testCategoryNavigation, 'Category Navigation Test');
+    await safeTest(testSearchFunctionality, 'Search Functionality Test');
+    await safeTest(testProductCardPresence, 'Product Card Presence Test');
+    await safeTest(testPagination, 'Pagination Test');
+    await safeTest(testFirstProductDetail, 'First Product Detail Test');
+    await safeTest(testAddToCart, 'Add to Cart Test');
+    await safeTest(testResponsiveUI, 'Responsive UI Test');
+    await safeTest(testButtonVisibility, 'Button Visibility Test');
+    await safeTest(testLogout, 'Logout Test');
+    await safeTest(testBrokenLinks, 'Broken Links Test');
 
     console.log('\n🎉 Universal E2E Test Completed!');
   } catch (err) {
