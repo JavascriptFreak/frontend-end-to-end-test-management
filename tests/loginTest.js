@@ -9,7 +9,7 @@ module.exports = async function testLogin(driver) {
 
   if (usernameSelector && passwordSelector && loginBtnSelector) {
     if (await waitForElement(usernameSelector) && await waitForElement(passwordSelector)) {
-      console.log('🔐 Attempting Login...');
+      console.log('🔐 Attempting Login..');
       await driver.findElement(By.css(usernameSelector)).sendKeys(config.user.username);
       await driver.findElement(By.css(passwordSelector)).sendKeys(config.user.password);
       await driver.findElement(By.css(loginBtnSelector)).click();
