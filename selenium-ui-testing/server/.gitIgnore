@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+*.log
+
+# environment variables
+.env
+.env.local
+
+# app output
+*.pid
+*.seed
+coverage/
+uploads/
+visual/current/
+visual/diffs/
+
+# OS & IDE junk
+.DS_Store
+.vscode/
+.idea/
+*.swp

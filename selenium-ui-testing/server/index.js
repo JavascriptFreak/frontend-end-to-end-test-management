@@ -1,47 +1,35 @@
-const { Builder } = require('selenium-webdriver');
-require('chromedriver');
-const fs = require('fs');
+const express = require('express');
+const multer = require('multer');
 const path = require('path');
-const resemble = require('resemblejs');
+const fs = require('fs');
+const runTests = require('./runTests'); // Move your visual comparison logic to this file
+const cors = require('cors');
 
-const currentDir = path.join(__dirname, 'visual/current');
-const diffsDir = path.join(__dirname, 'visual/diffs');
+const app = express();
+const PORT = 3001;
 
-// Ensure directories exist
-if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir, { recursive: true });
-if (!fs.existsSync(diffsDir)) fs.mkdirSync(diffsDir, { recursive: true });
+app.use(cors());
+app.use(express.json());
+app.use('/visual', express.static(path.join(__dirname, 'visual')));
 
-async function runTests(url, designImagePath) {
-  const driver = await new Builder().forBrowser('chrome').build();
+const upload = multer({ dest: 'uploads/' });
+
+// Endpoint to run test
+app.post('/compare', upload.single('design'), async (req, res) => {
+  const url = req.body.url;
+  const designImagePath = req.file.path;
 
   try {
-    await driver.get(url);
-    await driver.manage().window().setRect({ width: 1280, height: 800 });
-
-    // Screenshot current state
-    const screenshotBase64 = await driver.takeScreenshot();
-    const currentScreenshotPath = path.join(currentDir, 'current.png');
-    fs.writeFileSync(currentScreenshotPath, screenshotBase64, 'base64');
-
-    // Compare with design image
-    const diffPath = path.join(diffsDir, 'diff.png');
-
-    return new Promise((resolve, reject) => {
-      resemble(fs.readFileSync(designImagePath))
-        .compareTo(fs.readFileSync(currentScreenshotPath))
-        .ignoreColors()
-        .onComplete((data) => {
-          fs.writeFileSync(diffPath, data.getBuffer());
-          resolve({
-            mismatchPercentage: data.misMatchPercentage,
-            diffImage: `/visual/diffs/diff.png`,
-            currentScreenshot: `/visual/current/current.png`
-          });
-        });
-    });
+    const result = await runTests(url, designImagePath);
+    res.json(result);
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Comparison failed' });
   } finally {
-    await driver.quit();
+    fs.unlinkSync(designImagePath); // Clean up uploaded file
   }
-}
+});
 
-module.exports = runTests;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});

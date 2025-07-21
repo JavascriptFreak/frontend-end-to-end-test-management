@@ -6,7 +6,6 @@ import {
   Button,
   Box,
   CircularProgress,
-  Paper,
   Alert,
   Grid,
   Link,
@@ -30,47 +29,36 @@ function App() {
 
   const handleRunTests = async () => {
     setError('');
-    if (!url.trim()) {
-      setError('Please enter a valid URL.');
-      return;
-    }
-    if (!file) {
-      setError('Please upload a screenshot or design file.');
+    setResults(null);
+
+    if (!url || !file) {
+      setError('Please provide both a URL and a design image.');
       return;
     }
 
     setLoading(true);
-    setResults(null);
+    const formData = new FormData();
+    formData.append('url', url);
+    formData.append('design', file);
 
     try {
-      const formData = new FormData();
-      formData.append('url', url);
-      formData.append('designImage', file);
-
-      const response = await fetch('http://localhost:3001/run-tests', {
+      const response = await fetch('http://localhost:3001/compare', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Server error: ' + response.statusText);
-      }
+      if (!response.ok) throw new Error('Server error');
 
       const data = await response.json();
 
-      // Debug log to check what backend sends
-      console.log('Test results:', data);
-
       setResults({
-        mismatchPercentage:
-          typeof data.mismatchPercentage === 'number'
-            ? data.mismatchPercentage.toFixed(2)
-            : 'N/A',
-        visualDiffImage: data.diffImage,
-        currentScreenshot: data.currentScreenshot,
+        mismatchPercentage: parseFloat(data.mismatchPercentage).toFixed(2),
+        diffImage: `http://localhost:3001${data.diffImage}`,
+        currentScreenshot: `http://localhost:3001${data.currentScreenshot}`,
       });
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
+      console.error(err);
+      setError('Failed to run comparison. Please check the server and try again.');
     } finally {
       setLoading(false);
     }
@@ -83,210 +71,116 @@ function App() {
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        py: 10,
+        py: 8,
         px: 3,
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        fontFamily: "'Roboto', sans-serif",
       }}
     >
       <Container
         maxWidth="md"
         sx={{
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: 'rgba(255,255,255,0.95)',
           borderRadius: 4,
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+          boxShadow: 4,
           p: 5,
-          maxWidth: 800,
         }}
       >
-        <Typography
-          variant="h4"
-          align="center"
-          gutterBottom
-          sx={{
-            fontWeight: 700,
-            letterSpacing: 1.2,
-            color: '#003366',
-            mb: 1,
-          }}
-        >
-          Visual & Functional Frontend Tester
-        </Typography>
-        <Typography
-          variant="subtitle1"
-          align="center"
-          color="text.secondary"
-          sx={{ mb: 4, fontStyle: 'italic' }}
-        >
-          Enter your website URL and upload your design files. Get comprehensive UI & functionality test reports instantly.
+        <Typography variant="h4" align="center" fontWeight={700} mb={2} color="#003366">
+          Visual Regression Tester
         </Typography>
 
-        <Box
-          component="form"
-          noValidate
-          autoComplete="off"
-          sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 4 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleRunTests();
-          }}
-        >
+        <Typography variant="subtitle1" align="center" color="text.secondary" mb={4}>
+          Upload your design and test your site visually
+        </Typography>
+
+        <Box display="flex" flexDirection="column" gap={3}>
           <TextField
             label="Website URL"
-            variant="outlined"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             fullWidth
-            placeholder="https://www.example.com"
-            size="medium"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-              },
-            }}
           />
 
           <Button
             variant="outlined"
             component="label"
             startIcon={<UploadFileIcon />}
-            sx={{
-              alignSelf: 'flex-start',
-              borderRadius: 2,
-              borderColor: '#003366',
-              color: '#003366',
-              fontWeight: 600,
-              px: 3,
-              textTransform: 'none',
-              transition: 'background-color 0.3s ease, color 0.3s ease',
-              '&:hover': {
-                backgroundColor: '#003366',
-                color: '#fff',
-              },
-            }}
           >
-            Upload Screenshot or Figma File
+            Upload Design Image
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
           {file && (
-            <Typography
-              variant="body2"
-              color="text.primary"
-              sx={{ mt: 1, fontWeight: 500 }}
-            >
-              Selected file: {file.name}
+            <Typography variant="body2" color="text.secondary">
+              Selected: {file.name}
             </Typography>
           )}
 
-          {error && (
-            <Alert severity="error" variant="outlined" sx={{ mt: 1 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error">{error}</Alert>}
 
           <Button
-            type="submit"
             variant="contained"
+            color="primary"
+            onClick={handleRunTests}
             disabled={loading}
-            size="large"
-            sx={{
-              backgroundColor: '#003366',
-              borderRadius: 3,
-              fontWeight: 700,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              py: 1.8,
-              boxShadow: '0 6px 18px rgba(0, 51, 102, 0.5)',
-              '&:hover': {
-                backgroundColor: '#0059b3',
-                boxShadow: '0 8px 22px rgba(0, 89, 179, 0.7)',
-              },
-              transition: 'all 0.3s ease',
-            }}
+            sx={{ fontWeight: 'bold' }}
           >
-            {loading ? 'Running Tests...' : 'Run Tests'}
+            {loading ? 'Testing...' : 'Run Tests'}
           </Button>
         </Box>
 
         {loading && (
-          <Box display="flex" justifyContent="center" my={4} aria-label="Loading tests">
-            <CircularProgress size={50} thickness={5} />
+          <Box display="flex" justifyContent="center" mt={4}>
+            <CircularProgress />
           </Box>
         )}
 
         {results && (
-          <Paper
-            elevation={8}
-            sx={{ p: 4, borderRadius: 3, mt: 4, backgroundColor: '#f9fafd' }}
-          >
-            <Typography
-              variant="h6"
-              gutterBottom
-              sx={{ fontWeight: 700, color: '#003366' }}
-            >
-              Test Results Summary
+          <Box mt={6}>
+            <Typography variant="h6" mb={2}>
+              Test Results:
             </Typography>
-            <Grid container spacing={3} alignItems="center">
-              <Grid item xs={12}>
-                <Typography variant="body1">
-                  <strong>Mismatch Percentage:</strong> {results.mismatchPercentage}%
+
+            <Alert
+              icon={
+                results.mismatchPercentage < 1
+                  ? <CheckCircleOutlineIcon />
+                  : <ErrorOutlineIcon />
+              }
+              severity={results.mismatchPercentage < 1 ? 'success' : 'warning'}
+              sx={{ mb: 2 }}
+            >
+              Visual Mismatch: <strong>{results.mismatchPercentage}%</strong>
+            </Alert>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Current Screenshot
                 </Typography>
-              </Grid>
-              <Grid item xs={12} sx={{ mt: 3 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                  Visual Difference Preview:
-                </Typography>
-                <Box
-                  component="img"
-                  src={`http://localhost:3001${results.visualDiffImage}`}
-                  alt="Visual Difference"
-                  sx={{
-                    width: '100%',
-                    borderRadius: 4,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                  }}
+                <img
+                  src={results.currentScreenshot}
+                  alt="Current Screenshot"
+                  style={{ width: '100%', borderRadius: 8 }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ mt: 3 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                  Current Screenshot:
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Visual Diff Image
                 </Typography>
-                <Box
-                  component="img"
-                  src={`http://localhost:3001${results.currentScreenshot}`}
-                  alt="Current Screenshot"
-                  sx={{
-                    width: '100%',
-                    borderRadius: 4,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                  }}
+                <img
+                  src={results.diffImage}
+                  alt="Diff Screenshot"
+                  style={{ width: '100%', borderRadius: 8 }}
                 />
               </Grid>
             </Grid>
-          </Paper>
+          </Box>
         )}
 
-        <Box
-          component="footer"
-          textAlign="center"
-          color="text.secondary"
-          fontSize={14}
-          mt={6}
-          sx={{ userSelect: 'none' }}
-        >
-          © {new Date().getFullYear()} Visual & Functional Testing Platform —{' '}
-          <Link
-            href="https://github.com/your-repo"
-            target="_blank"
-            rel="noopener noreferrer"
-            underline="hover"
-            color="inherit"
-          >
-            GitHub Repo
-          </Link>
+        <Box textAlign="center" mt={6} fontSize={14} color="text.secondary">
+          © {new Date().getFullYear()} | Built for Final Year Projects
         </Box>
       </Container>
     </Box>
