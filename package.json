@@ -12,8 +12,10 @@
   "type": "commonjs",
   "dependencies": {
     "chai": "^5.2.0",
-    "chromedriver": "^136.0.3",
     "node-fetch": "^2.7.0",
-    "selenium-webdriver": "^4.33.0"
+    "selenium-webdriver": "^4.34.0"
+  },
+  "devDependencies": {
+    "chromedriver": "^138.0.3"
   }
 }
