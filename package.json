@@ -12,7 +12,9 @@
   "type": "commonjs",
   "dependencies": {
     "chai": "^5.2.0",
+    "mkdirp": "^3.0.1",
     "node-fetch": "^2.7.0",
+    "resemblejs": "^5.0.0",
     "selenium-webdriver": "^4.34.0"
   },
   "devDependencies": {
