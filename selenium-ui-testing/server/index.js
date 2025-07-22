@@ -20,15 +20,16 @@ app.post('/compare', upload.single('design'), async (req, res) => {
   const designImagePath = req.file.path;
 
   try {
-    const result = await runTests(url, designImagePath);
-    res.json(result);
+    const results = await runTests(url, designImagePath);
+    res.json(results);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Comparison failed' });
   } finally {
-    fs.unlinkSync(designImagePath); // Clean up uploaded file
+    fs.unlinkSync(designImagePath);
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

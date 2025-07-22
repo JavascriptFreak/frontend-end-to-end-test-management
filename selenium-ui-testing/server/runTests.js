@@ -1,78 +1,69 @@
 const { Builder } = require('selenium-webdriver');
+const runFunctionalTests = require('./functionalRunner');
+const generateHTMLReport = require('./generateReport');
+const chrome = require('selenium-webdriver/chrome');
+const os = require('os');
 require('chromedriver');
 const fs = require('fs');
 const path = require('path');
 const resemble = require('resemblejs');
 
-// Define paths relative to project root (for CI/CD safety)
-const currentDir = path.resolve(__dirname, '../visual/current');
-const diffsDir = path.resolve(__dirname, '../visual/diffs');
+// Device sizes to simulate
+const viewports = [
+  { name: 'mobile', width: 375, height: 667 },
+  { name: 'tablet', width: 768, height: 1024 },
+  { name: 'desktop', width: 1280, height: 800 }
+];
 
-// Create output folders if they don’t exist
+const baseDir = path.resolve(__dirname, '../visual');
+const currentDir = path.join(baseDir, 'current');
+const diffsDir = path.join(baseDir, 'diffs');
+
 if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir, { recursive: true });
 if (!fs.existsSync(diffsDir)) fs.mkdirSync(diffsDir, { recursive: true });
 
-// Main test function
 async function runTests(url, designImagePath) {
-  const driver = await new Builder().forBrowser('chrome').build();
+  const results = [];
 
-  try {
-    // Load page and take screenshot
-    await driver.get(url);
-    await driver.manage().window().setRect({ width: 1280, height: 800 });
+  for (const device of viewports) {
+    const driver = await new Builder().forBrowser('chrome').build();
+    try {
+      await driver.get(url);
+           await driver.manage().window().setRect({ width: device.width, height: device.height });
 
-    const screenshotBase64 = await driver.takeScreenshot();
-    const currentScreenshotPath = path.join(currentDir, 'current.png');
-    fs.writeFileSync(currentScreenshotPath, screenshotBase64, 'base64');
+      const functionalResults = await runFunctionalTests(driver);
 
-    const diffPath = path.join(diffsDir, 'diff.png');
+      const screenshotBase64 = await driver.takeScreenshot();
+      const currentScreenshotPath = path.join(currentDir, `${device.name}.png`);
+      const diffPath = path.join(diffsDir, `${device.name}-diff.png`);
 
-    // Compare screenshots using Resemble.js
-    return new Promise((resolve, reject) => {
-      resemble(fs.readFileSync(path.resolve(designImagePath)))
-        .compareTo(fs.readFileSync(currentScreenshotPath))
-        .ignoreColors()
-        .onComplete((data) => {
-          fs.writeFileSync(diffPath, data.getBuffer());
-          resolve({
-            mismatchPercentage: data.misMatchPercentage,
-            diffImage: diffPath,
-            currentScreenshot: currentScreenshotPath
-          });
-        });
-    });
-  } finally {
-    await driver.quit();
+      fs.writeFileSync(currentScreenshotPath, screenshotBase64, 'base64');
+
+      const data = await new Promise((resolve) => {
+        resemble(fs.readFileSync(path.resolve(designImagePath)))
+          .compareTo(fs.readFileSync(currentScreenshotPath))
+          .ignoreColors()
+          .onComplete(resolve);
+      });
+
+      fs.writeFileSync(diffPath, data.getBuffer());
+
+      results.push({
+        device: device.name,
+        mismatchPercentage: data.misMatchPercentage,
+        diffImage: `/visual/diffs/${device.name}-diff.png`,
+        currentScreenshot: `/visual/current/${device.name}.png`,
+        functionalResults // 👈 new key
+      });
+generateHTMLReport(results);
+    } catch (err) {
+      console.error(`Error testing ${device.name}:`, err);
+    } finally {
+      await driver.quit();
+    }
   }
+
+  return results;
 }
 
-// Export for server.js or other modules
 module.exports = runTests;
-
-// Enable CLI usage (for GitHub Actions or terminal)
-if (require.main === module) {
-  const [,, url, designImagePath] = process.argv;
-
-  if (!url || !designImagePath) {
-    console.error("❌ Usage: node runTests.js <url> <designImagePath>");
-    process.exit(1);
-  }
-
-  runTests(url, designImagePath)
-    .then(result => {
-      console.log("✅ Visual Test Complete");
-      console.log(`Mismatch Percentage: ${result.mismatchPercentage}%`);
-      console.log(`Diff Image: ${result.diffImage}`);
-      console.log(`Current Screenshot: ${result.currentScreenshot}`);
-
-      // Optional: fail the CI job if mismatch is too high
-      if (parseFloat(result.mismatchPercentage) > 5) {
-        console.error("❌ Visual mismatch too high!");
-        process.exit(1);
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error during visual test:", err);
-      process.exit(1);
-    });
-}

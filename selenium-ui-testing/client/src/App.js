@@ -8,13 +8,13 @@ import {
   CircularProgress,
   Alert,
   Grid,
-  Link,
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-const bgImage = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1470&q=80';
+const bgImage =
+  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1470&q=80';
 
 function App() {
   const [url, setUrl] = useState('');
@@ -50,12 +50,7 @@ function App() {
       if (!response.ok) throw new Error('Server error');
 
       const data = await response.json();
-
-      setResults({
-        mismatchPercentage: parseFloat(data.mismatchPercentage).toFixed(2),
-        diffImage: `http://localhost:3001${data.diffImage}`,
-        currentScreenshot: `http://localhost:3001${data.currentScreenshot}`,
-      });
+      setResults(data); // Now an array of device-specific results
     } catch (err) {
       console.error(err);
       setError('Failed to run comparison. Please check the server and try again.');
@@ -91,7 +86,7 @@ function App() {
         </Typography>
 
         <Typography variant="subtitle1" align="center" color="text.secondary" mb={4}>
-          Upload your design and test your site visually
+          Upload your design and test your site visually on all screen sizes
         </Typography>
 
         <Box display="flex" flexDirection="column" gap={3}>
@@ -102,14 +97,11 @@ function App() {
             fullWidth
           />
 
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<UploadFileIcon />}
-          >
+          <Button variant="outlined" component="label" startIcon={<UploadFileIcon />}>
             Upload Design Image
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
+
           {file && (
             <Typography variant="body2" color="text.secondary">
               Selected: {file.name}
@@ -138,46 +130,73 @@ function App() {
         {results && (
           <Box mt={6}>
             <Typography variant="h6" mb={2}>
-              Test Results:
+              Test Results (by device):
             </Typography>
 
-            <Alert
-              icon={
-                results.mismatchPercentage < 1
-                  ? <CheckCircleOutlineIcon />
-                  : <ErrorOutlineIcon />
-              }
-              severity={results.mismatchPercentage < 1 ? 'success' : 'warning'}
-              sx={{ mb: 2 }}
-            >
-              Visual Mismatch: <strong>{results.mismatchPercentage}%</strong>
-            </Alert>
+            {results.map((res, i) => (
+              <Box key={i} mb={6}>
+                <Alert
+                  icon={
+                    res.mismatchPercentage < 1 ? (
+                      <CheckCircleOutlineIcon />
+                    ) : (
+                      <ErrorOutlineIcon />
+                    )
+                  }
+                  severity={res.mismatchPercentage < 1 ? 'success' : 'warning'}
+                  sx={{ mb: 2 }}
+                >
+                  <strong>{res.device.toUpperCase()}</strong> – Visual Mismatch:{' '}
+                  <strong>{parseFloat(res.mismatchPercentage).toFixed(2)}%</strong>
+                </Alert>
+                <Box mb={2}>
+                  <Typography variant="subtitle1" gutterBottom>Functional Test Results:</Typography>
+                  <ul>
+                    {res.functionalResults.map((test, index) => (
+                      <li key={index} style={{ color: test.status === 'passed' ? 'green' : 'red' }}>
+                        {test.test}: {test.status} {test.message && `– ${test.message}`}
+                      </li>
+                    ))}
+                  </ul>
+                </Box>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Current Screenshot ({res.device})
+                    </Typography>
+                    <img
+                      src={res.currentScreenshot}
+                      alt={`${res.device} Screenshot`}
+                      style={{ width: '100%', borderRadius: 8 }}
+                    />
+                  </Grid>
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Current Screenshot
-                </Typography>
-                <img
-                  src={results.currentScreenshot}
-                  alt="Current Screenshot"
-                  style={{ width: '100%', borderRadius: 8 }}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Visual Diff Image
-                </Typography>
-                <img
-                  src={results.diffImage}
-                  alt="Diff Screenshot"
-                  style={{ width: '100%', borderRadius: 8 }}
-                />
-              </Grid>
-            </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Diff Image ({res.device})
+                    </Typography>
+                    <img
+                      src={res.diffImage}
+                      alt={`${res.device} Diff`}
+                      style={{ width: '100%', borderRadius: 8 }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            ))}
           </Box>
         )}
+        <Box mt={4} textAlign="center">
+          <Button
+            variant="outlined"
+            color="success"
+            href="http://localhost:3001/visual/reports/result.html"
+            target="_blank"
+            download
+          >
+            Download Full Report
+          </Button>
+        </Box>
 
         <Box textAlign="center" mt={6} fontSize={14} color="text.secondary">
           © {new Date().getFullYear()} | Built for Final Year Projects
