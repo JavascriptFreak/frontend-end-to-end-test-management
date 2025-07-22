@@ -47,13 +47,13 @@ function App() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Server error');
+      if (!response.ok) throw new Error(Error);
 
       const data = await response.json();
       setResults(data); // Now an array of device-specific results
-    } catch (err) {
-      console.error(err);
-      setError('Failed to run comparison. Please check the server and try again.');
+    }  catch (err) {
+      console.error('Error caught in handleRunTests:', err);
+      setError('Failed to run comparison. Please check the server and try again. ' + (err.message || ''));
     } finally {
       setLoading(false);
     }
