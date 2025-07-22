@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+
 const { By } = require('selenium-webdriver');
 
 module.exports = async function testBrokenLinks(driver, url) {

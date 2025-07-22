@@ -1,4 +1,5 @@
 const { Builder } = require('selenium-webdriver');
+
 const runFunctionalTests = require('./functionalRunner');
 const generateHTMLReport = require('./generateReport');
 const chrome = require('selenium-webdriver/chrome');

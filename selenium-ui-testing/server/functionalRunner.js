@@ -1,4 +1,5 @@
 const testLogin = require('./tests/testLogin');
+const testBrokenLinks =require('./tests/testBrokenLinks')
 const testLogout = require('./tests/testLogout');
 const testSearch = require('./tests/testSearchFunctionality');
 const testAddToCart = require('./tests/testAddToCart');
@@ -13,6 +14,7 @@ const testFirstProductDetail = require('./tests/testFirstProductDetail');
 async function runFunctionalTests(driver,url) {
   const tests = [
     testLogin,
+    testBrokenLinks,
     testSearch,
     testAddToCart,
     testPagination,
