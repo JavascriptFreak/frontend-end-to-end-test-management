@@ -1,0 +1,43 @@
+name: Visual Regression Test CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  visual-regression-test:
+    runs-on: ubuntu-latest
+    services:
+      chrome:
+        image: selenium/standalone-chrome
+        options: >-
+          --shm-size=2g
+          --privileged
+        ports:
+          - 4444:4444
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Visual Regression Test
+        run: node server/runTests.js 'https://example.com' 'server/reference.png'
+
+      - name: Upload Screenshot Artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: visual-results
+          path: |
+            visual/current/current.png
+            visual/diffs/diff.png
