@@ -1,4 +1,4 @@
-name: Visual Regression Test CI
+name: Full CI - Frontend + Backend Visual Regression
 
 on:
   push:
@@ -7,8 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  visual-regression-test:
+  ci:
     runs-on: ubuntu-latest
+
     services:
       chrome:
         image: selenium/standalone-chrome
@@ -19,7 +20,7 @@ jobs:
           - 4444:4444
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -27,17 +28,32 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Dependencies
+      # Install frontend dependencies
+      - name: Install frontend dependencies
+        working-directory: ./client
         run: npm install
 
-      - name: Run Visual Regression Test
-        run: node server/runTests.js 'https://example.com' 'server/reference.png'
+      # (Optional) Build frontend if needed
+      - name: Build frontend (optional)
+        working-directory: ./client
+        run: npm run build
 
+      # Install backend dependencies
+      - name: Install backend dependencies
+        working-directory: ./server
+        run: npm install
+
+      # Run visual regression tests
+      - name: Run Visual Regression Test
+        working-directory: ./server
+        run: node runTests.js 'https://example.com' 'reference.png'
+
+      # Upload screenshots (diff & current)
       - name: Upload Screenshot Artifacts
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: visual-results
           path: |
-            visual/current/current.png
-            visual/diffs/diff.png
+            server/visual/current/current.png
+            server/visual/diffs/diff.png
