@@ -30,22 +30,22 @@ jobs:
 
       # Install frontend dependencies
       - name: Install frontend dependencies
-        working-directory: ./client
+        working-directory: ./selenium-ui-testing/client
         run: npm install
 
       # (Optional) Build frontend if needed
       - name: Build frontend (optional)
-        working-directory: ./client
+        working-directory: ./selenium-ui-testing/client
         run: npm run build
 
       # Install backend dependencies
       - name: Install backend dependencies
-        working-directory: ./server
+        working-directory: ./selenium-ui-testing/server
         run: npm install
 
       # Run visual regression tests
       - name: Run Visual Regression Test
-        working-directory: ./server
+        working-directory:  ./selenium-ui-testing/server
         run: node runTests.js 'https://example.com' 'reference.png'
 
       # Upload screenshots (diff & current)
