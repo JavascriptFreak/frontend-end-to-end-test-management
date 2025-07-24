@@ -10,10 +10,17 @@ async function waitForElement(driver, selector, timeout = 5000) {
 
 module.exports = async function testLogin(driver, url) {
   await driver.get(url);
-  
-  const usernameSelector = await findFirstExistingSelector(driver, config.selectors.login.username);
-  const passwordSelector = await findFirstExistingSelector(driver, config.selectors.login.password);
-  const loginBtnSelector = await findFirstExistingSelector(driver, config.selectors.login.loginBtn);
+
+  let usernameSelector, passwordSelector, loginBtnSelector;
+
+  try {
+    usernameSelector = await findFirstExistingSelector(driver, config.selectors.login.username);
+    passwordSelector = await findFirstExistingSelector(driver, config.selectors.login.password);
+    loginBtnSelector = await findFirstExistingSelector(driver, config.selectors.login.loginBtn);
+  } catch (e) {
+    console.log('ℹ️ Login not available (selectors not found)');
+    return; // Exit the test early
+  }
 
   if (usernameSelector && passwordSelector && loginBtnSelector) {
     if (await waitForElement(driver, usernameSelector) && await waitForElement(driver, passwordSelector)) {
@@ -25,6 +32,10 @@ module.exports = async function testLogin(driver, url) {
       console.log('✅ Login attempted');
     }
   } else {
-    console.log('ℹ️ Login not available');
+    console.log('ℹ️ Login elements not found');
   }
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 8af78334501d810ec7e0d1a75330452048487324

@@ -3,13 +3,10 @@ const { Builder } = require('selenium-webdriver');
 const runFunctionalTests = require('./functionalRunner');
 const generateHTMLReport = require('./generateReport');
 const chrome = require('selenium-webdriver/chrome');
-const os = require('os');
-require('chromedriver');
 const fs = require('fs');
 const path = require('path');
 const resemble = require('resemblejs');
 
-// Device sizes to simulate
 const viewports = [
   { name: 'mobile', width: 375, height: 667 },
   { name: 'tablet', width: 768, height: 1024 },
@@ -30,9 +27,9 @@ async function runTests(url, designImagePath) {
     const driver = await new Builder().forBrowser('chrome').build();
     try {
       await driver.get(url);
-           await driver.manage().window().setRect({ width: device.width, height: device.height });
+      await driver.manage().window().setRect({ width: device.width, height: device.height });
 
-      const functionalResults = await runFunctionalTests(driver,url);
+      const functionalResults = await runFunctionalTests(driver, url);
 
       const screenshotBase64 = await driver.takeScreenshot();
       const currentScreenshotPath = path.join(currentDir, `${device.name}.png`);
@@ -49,14 +46,16 @@ async function runTests(url, designImagePath) {
 
       fs.writeFileSync(diffPath, data.getBuffer());
 
+      const diffBase64 = await fs.promises.readFile(diffPath, { encoding: 'base64' });
+
       results.push({
         device: device.name,
         mismatchPercentage: data.misMatchPercentage,
-        diffImage: `/visual/diffs/${device.name}-diff.png`,
-        currentScreenshot: `/visual/current/${device.name}.png`,
-        functionalResults // 👈 new key
+        currentScreenshot: `data:image/png;base64,${screenshotBase64}`,
+        diffImage: `data:image/png;base64,${diffBase64}`,
+        functionalResults
       });
-generateHTMLReport(results);
+
     } catch (err) {
       console.error(`Error testing ${device.name}:`, err);
     } finally {
@@ -64,6 +63,7 @@ generateHTMLReport(results);
     }
   }
 
+  generateHTMLReport(results); // move outside loop so it's called once
   return results;
 }
 
