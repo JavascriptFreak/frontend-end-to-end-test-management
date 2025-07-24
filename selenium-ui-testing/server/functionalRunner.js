@@ -9,6 +9,7 @@ const testButtonVisibility = require('./tests/testButtonVisibility');
 const testResponsiveUI = require('./tests/testResponsiveUI');
 const testProductCardPresence = require('./tests/testProductCardPresence');
 const testFirstProductDetail = require('./tests/testFirstProductDetail');
+const testProductNavigation = require('./tests/testProductNavigation')
 
 async function runFunctionalTests(driver,url) {
   const tests = [
@@ -22,20 +23,36 @@ async function runFunctionalTests(driver,url) {
     testProductCardPresence,
     testFirstProductDetail,
     testLogout,
-    testResponsiveUI
+    testResponsiveUI,
+    testProductNavigation
   ];
 
   const results = [];
-
   for (const test of tests) {
     try {
-      await test(driver, url);
-      results.push({ test: test.name, status: 'passed' });
+      const result = await test(driver, url);
+      
+      if (result?.status === 'skipped') {
+        results.push({ test: test.name, status: 'skipped', message: result.message });
+      } else {
+        results.push({ test: test.name, status: 'passed' });
+      }
+  
     } catch (err) {
-      console.error(`❌ Error running ${test.name}:`, err.message);
+      // console.error(❌ Error running ${test.name}:, err.message);
       results.push({ test: test.name, status: 'failed', message: err.message });
     }
   }
+
+  // for (const test of tests) {
+  //   try {
+  //     await test(driver, url);
+  //     results.push({ test: test.name, status: 'passed' });
+  //   } catch (err) {
+  //     console.error(`❌ Error running ${test.name}:`, err.message);
+  //     results.push({ test: test.name, status: 'failed', message: err.message });
+  //   }
+  // }
 
   return results;
 }

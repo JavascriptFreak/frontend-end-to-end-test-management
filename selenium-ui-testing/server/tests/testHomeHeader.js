@@ -1,15 +1,22 @@
+const { By, until } = require('selenium-webdriver');
 
-const { By } = require('selenium-webdriver');
-
-module.exports = async function testHomeHeader(driver,url) {
+module.exports = async function testHomeHeader(driver, url) {
   await driver.get(url);
-  const headerSelectors = ['h1', '.header', '.page-header'];
-  for (let sel of headerSelectors) {
-    if (await elementExists(sel)) {
-      const text = await driver.findElement(By.css(sel)).getText();
-      console.log(`🏠 Home header found: ${text}`);
-      return;
+
+  // Check for Amazon header elements: logo and search bar
+  const selectors = ['#nav-logo', '#nav-search-bar-form'];
+
+  for (const sel of selectors) {
+    try {
+      await driver.wait(until.elementLocated(By.css(sel)), 5000);
+      const elem = await driver.findElement(By.css(sel));
+      if (elem) {
+        return { status: 'passed' };
+      }
+    } catch {
+      // continue to next selector
     }
   }
-  console.log('ℹ️ Home header not found');
+
+  return { status: 'failed', message: 'Amazon header elements not found' };
 };
