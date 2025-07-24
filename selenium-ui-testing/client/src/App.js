@@ -27,7 +27,7 @@ function App() {
     setFile(e.target.files[0]);
   };
 
-  const handleRunTests = async () => {
+const handleRunTests = async () => {
     setError('');
     setResults(null);
 
@@ -56,8 +56,8 @@ function App() {
       setError('Failed to run comparison. Please check the server and try again. ' + (err.message || ''));
     } finally {
       setLoading(false);
-    }
-  };
+    }
+  };
 
   return (
     <Box
@@ -153,8 +153,18 @@ function App() {
                   <Typography variant="subtitle1" gutterBottom>Functional Test Results:</Typography>
                   <ul>
                     {res.functionalResults.map((test, index) => (
-                      <li key={index} style={{ color: test.status === 'passed' ? 'green' : 'red' }}>
-                        {test.test}: {test.status} {test.message && `– ${test.message}`}
+                      <li
+                        key={index}
+                        style={{
+                          color:
+                            test.status === 'passed'
+                              ? 'green'
+                              : test.status === 'skipped'
+                                ? 'orange'
+                                : 'red'
+                        }}
+                      >
+                        {test.test}: {test.status} {test.message && '${test.message}'}
                       </li>
                     ))}
                   </ul>
@@ -199,7 +209,7 @@ function App() {
         </Box>
 
         <Box textAlign="center" mt={6} fontSize={14} color="text.secondary">
-          © {new Date().getFullYear()} | Built for Final Year Projects
+          © {new Date().getFullYear()} | Built for End to End Testing Project
         </Box>
       </Container>
     </Box>

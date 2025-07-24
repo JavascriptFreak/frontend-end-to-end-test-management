@@ -1,8 +1,12 @@
 const { By } = require('selenium-webdriver');
+const { findFirstExistingSelector } = require('./utils');
+const config = require('../config');
 
-module.exports = async function testLogout(driver,url) {
+module.exports = async function testLogout(driver, url) {
   await driver.get(url);
-  const logoutSelector = await findFirstExistingSelector(config.selectors.logout);
+
+  const logoutSelector = await findFirstExistingSelector(driver, config.selectors.logout);
+
   if (logoutSelector) {
     await driver.findElement(By.css(logoutSelector)).click();
     console.log('👋 Logged out');

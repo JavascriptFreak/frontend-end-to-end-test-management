@@ -32,7 +32,7 @@ async function runTests(url, designImagePath) {
       await driver.get(url);
            await driver.manage().window().setRect({ width: device.width, height: device.height });
 
-      const functionalResults = await runFunctionalTests(driver);
+      const functionalResults = await runFunctionalTests(driver,url);
 
       const screenshotBase64 = await driver.takeScreenshot();
       const currentScreenshotPath = path.join(currentDir, `${device.name}.png`);

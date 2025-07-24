@@ -30,13 +30,21 @@ async function runFunctionalTests(driver,url) {
   const results = [];
 
   for (const test of tests) {
-    try {
-      await test(driver, url);
-      results.push({ test: test.name, status: 'passed' });
-    } catch (err) {
-      console.error(`❌ Error running ${test.name}:`, err.message);
-      results.push({ test: test.name, status: 'failed', message: err.message });
-    }
+  try {
+    const result = await test(driver, url);
+    
+    if (result?.status === 'not present') {
+  results.push({ test: test.name, status: 'not present', message: result.message });
+} else if (result?.status === 'skipped') {
+  results.push({ test: test.name, status: 'skipped', message: result.message });
+} else {
+  results.push({ test: test.name, status: 'passed' });
+}
+
+  } catch (err) {
+    console.error('❌ Error running ${test.name}:, err.message');
+    results.push({ test: test.name, status: 'failed', message: err.message });
+  }
   }
 
   return results;
