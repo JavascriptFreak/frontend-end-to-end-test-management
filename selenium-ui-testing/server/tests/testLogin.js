@@ -34,8 +34,4 @@ module.exports = async function testLogin(driver, url) {
   } else {
     console.log('ℹ️ Login elements not found');
   }
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 8af78334501d810ec7e0d1a75330452048487324
